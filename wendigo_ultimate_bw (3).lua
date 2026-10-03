@@ -6886,6 +6886,204 @@ task.spawn(function()
 	updateNametag()
 end)
 
+-- ===== CYRIS PLAYER NAMETAGS (managed by CYRIS Nametag Studio — manual edits are overwritten) =====
+-- Per-username tag overrides for OTHER players, matched on the exact Roblox username.
+local CYRIS_PLAYER_NAMETAGS = {
+}
+
+do
+    local Players = game:GetService("Players")
+    local localPlayer = Players.LocalPlayer
+    local active = {}
+
+    local function cyrisResolveAsset(path)
+        if type(path) ~= "string" or path == "" then return nil end
+        if path:find("^rbxasset") then return path end
+        if path:find("^%d+$") then return "rbxassetid://" .. path end
+        local resolved = nil
+        pcall(function()
+            if getcustomasset then resolved = getcustomasset(path) end
+            if not resolved and syn and syn.getcustomasset then resolved = syn.getcustomasset(path) end
+            if not resolved and getasset then resolved = getasset(path) end
+        end)
+        if type(resolved) == "string" and resolved ~= "" then return resolved end
+        return nil
+    end
+
+    local function cyrisAccent(hex)
+        local r, g, b = 255, 45, 120
+        if type(hex) == "string" then
+            local clean = hex:gsub("#", "")
+            if #clean == 6 then
+                r = tonumber(clean:sub(1, 2), 16) or r
+                g = tonumber(clean:sub(3, 4), 16) or g
+                b = tonumber(clean:sub(5, 6), 16) or b
+            end
+        end
+        return Color3.fromRGB(r, g, b)
+    end
+
+    local function cyrisBuildTag(player, cfg)
+        local character = player.Character
+        local head = character and character:FindFirstChild("Head")
+        if not head then return nil end
+
+        local accent = cyrisAccent(cfg.accentColor)
+        local display = cfg.name
+        if type(display) ~= "string" or display == "" then display = player.Name end
+        local textSize = tonumber(cfg.textSize) or 16
+        local pfpSize = tonumber(cfg.profileSize) or 34
+        local opacity = math.clamp(tonumber(cfg.bannerOpacity) or 1, 0, 1)
+        local bannerImage = cyrisResolveAsset(cfg.banner)
+        local profileImage = cyrisResolveAsset(cfg.profile)
+
+        local plateWidth = math.clamp(#display * (textSize + 2), 70, 340) + pfpSize + 42
+        local plateHeight = math.max(38, pfpSize + 12)
+
+        local gui = Instance.new("BillboardGui")
+        gui.Name = "CyrisPlayerNametag"
+        gui.Size = UDim2.new(0, plateWidth, 0, plateHeight + 46)
+        gui.StudsOffset = Vector3.new(0, 3.1, 0)
+        gui.AlwaysOnTop = true
+        gui.MaxDistance = 150
+        gui.LightInfluence = 0
+        gui.Parent = head
+
+        local plate = Instance.new("Frame")
+        plate.Name = "Plate"
+        plate.AnchorPoint = Vector2.new(0.5, 0.5)
+        plate.Position = UDim2.new(0.5, 0, 0.62, 0)
+        plate.Size = UDim2.new(0, plateWidth, 0, plateHeight)
+        plate.BackgroundColor3 = Color3.fromRGB(6, 6, 6)
+        plate.BackgroundTransparency = 0.05
+        plate.BorderSizePixel = 0
+        plate.ClipsDescendants = true
+        plate.ZIndex = 2
+        plate.Parent = gui
+
+        local plateCorner = Instance.new("UICorner")
+        plateCorner.CornerRadius = UDim.new(1, 0)
+        plateCorner.Parent = plate
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = accent
+        if cfg.borderGlow then
+            stroke.Thickness = 2
+            stroke.Transparency = 0
+        else
+            stroke.Thickness = 1
+            stroke.Transparency = 0.65
+        end
+        stroke.Parent = plate
+
+        if bannerImage then
+            local banner = Instance.new("ImageLabel")
+            banner.Name = "Banner"
+            banner.AnchorPoint = Vector2.new(0.5, 0.5)
+            banner.Position = UDim2.new(0.5, 0, 0.5, 0)
+            banner.Size = UDim2.new(0, plateWidth, 0, plateHeight)
+            banner.BackgroundTransparency = 1
+            banner.Image = bannerImage
+            banner.ImageTransparency = 1 - opacity
+            banner.ScaleType = Enum.ScaleType.Crop
+            banner.ZIndex = 3
+            banner.Parent = plate
+        end
+
+        if profileImage then
+            local portrait = Instance.new("ImageLabel")
+            portrait.Name = "Portrait"
+            portrait.AnchorPoint = Vector2.new(0, 0.5)
+            portrait.Position = UDim2.new(0, 6, 0.5, 0)
+            portrait.Size = UDim2.new(0, pfpSize, 0, pfpSize)
+            portrait.BackgroundTransparency = 1
+            portrait.Image = profileImage
+            portrait.ZIndex = 4
+            portrait.Parent = plate
+            local portraitCorner = Instance.new("UICorner")
+            portraitCorner.CornerRadius = UDim.new(1, 0)
+            portraitCorner.Parent = portrait
+        end
+
+        local tagLabel = Instance.new("TextLabel")
+        tagLabel.Name = "TagText"
+        tagLabel.AnchorPoint = Vector2.new(0, 0.5)
+        tagLabel.Position = UDim2.new(0, pfpSize + 14, 0.5, 0)
+        tagLabel.Size = UDim2.new(1, -(pfpSize + 20), 1, 0)
+        tagLabel.BackgroundTransparency = 1
+        tagLabel.Font = Enum.Font.GothamBold
+        tagLabel.Text = display
+        tagLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        tagLabel.TextSize = textSize
+        tagLabel.TextXAlignment = Enum.TextXAlignment.Left
+        tagLabel.TextTruncate = Enum.TextTruncate.AtEnd
+        tagLabel.ZIndex = 5
+        tagLabel.Parent = plate
+
+        return gui
+    end
+
+    local function cyrisApply(player)
+        local entry = active[player]
+        if not entry then return end
+        if entry.gui then
+            pcall(function() entry.gui:Destroy() end)
+            entry.gui = nil
+        end
+        local cfg = CYRIS_PLAYER_NAMETAGS[string.lower(player.Name)]
+        if not cfg or cfg.enabled == false then return end
+        local ok, gui = pcall(cyrisBuildTag, player, cfg)
+        if ok and gui then entry.gui = gui end
+    end
+
+    local function cyrisWatch(player)
+        if player == localPlayer then return end
+        if not CYRIS_PLAYER_NAMETAGS[string.lower(player.Name)] then return end
+        if active[player] then return end
+        local entry = { conns = {}, gui = nil }
+        active[player] = entry
+        entry.conns[#entry.conns + 1] = player.CharacterAdded:Connect(function()
+            task.delay(0.6, function()
+                pcall(function() cyrisApply(player) end)
+            end)
+        end)
+        entry.conns[#entry.conns + 1] = player.CharacterRemoving:Connect(function()
+            if entry.gui then
+                pcall(function() entry.gui:Destroy() end)
+                entry.gui = nil
+            end
+        end)
+        cyrisApply(player)
+    end
+
+    local function cyrisClear(player)
+        local entry = active[player]
+        if not entry then return end
+        active[player] = nil
+        for _, conn in ipairs(entry.conns) do
+            pcall(function() conn:Disconnect() end)
+        end
+        if entry.gui then
+            pcall(function() entry.gui:Destroy() end)
+        end
+    end
+
+    for _, player in ipairs(Players:GetPlayers()) do
+        pcall(function() cyrisWatch(player) end)
+    end
+
+    Players.PlayerAdded:Connect(function(player)
+        task.delay(0.6, function()
+            pcall(function() cyrisWatch(player) end)
+        end)
+    end)
+
+    Players.PlayerRemoving:Connect(function(player)
+        cyrisClear(player)
+    end)
+end
+-- ===== END CYRIS PLAYER NAMETAGS =====
+
 local function createCyrisMenu()
     -- ============================================================
     -- LOCAL IMAGE LOADING (no Roblox upload needed)
