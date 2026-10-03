@@ -19,8 +19,8 @@ print("[CYRIS] Player: " .. tostring(LocalPlayer.Name))
 -- ===== CYRIS SAVED NAMETAG (managed by CYRIS Nametag Studio — manual edits are overwritten) =====
 local CYRIS_SAVED_NAMETAG = {
     enabled = true,
-    name = "CYRIS",
-    banner = "",
+    name = "wendigo",
+    banner = "https://i.pinimg.com/originals/36/11/3e/36113e3f191c49d87eadb6578216045b.gif",
     profile = "",
     accentColor = "#ff2d78",
     textSize = 16,
