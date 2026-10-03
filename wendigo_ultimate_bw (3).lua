@@ -6889,6 +6889,7 @@ end)
 -- ===== CYRIS PLAYER NAMETAGS (managed by CYRIS Nametag Studio — manual edits are overwritten) =====
 -- Per-username tag overrides for OTHER players, matched on the exact Roblox username.
 local CYRIS_PLAYER_NAMETAGS = {
+    ["sakuga"] = { enabled = true, name = "wendigoooo papa", banner = "https://i.pinimg.com/originals/57/8e/16/578e16e941e57463fb16218e19b3b20a.gif", profile = "https://i.pinimg.com/736x/6e/3b/8d/6e3b8d31cc4cdab0887aa9ee72a9e50e.jpg", accentColor = "#ff2d78", textSize = 16, bannerOpacity = 1, profileSize = 34, borderGlow = true },
 }
 
 do
